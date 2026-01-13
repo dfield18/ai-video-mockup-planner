@@ -31,7 +31,10 @@ class GeminiClient:
         if not self.api_key:
             raise ValueError("GOOGLE_API_KEY must be provided")
 
-        if GENAI_AVAILABLE:
+        # Check if using stub mode
+        if self.api_key == "stub_for_testing":
+            self.model = None
+        elif GENAI_AVAILABLE:
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel(self.model_name)
         else:
