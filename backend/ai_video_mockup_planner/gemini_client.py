@@ -36,7 +36,28 @@ class GeminiClient:
             self.model = None
         elif GENAI_AVAILABLE:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel(self.model_name)
+            # Try multiple model names for better compatibility
+            models_to_try = [
+                self.model_name,
+                "gemini-pro",
+                "models/gemini-pro",
+                "gemini-1.5-pro",
+                "models/gemini-1.5-pro",
+            ]
+
+            self.model = None
+            for model_attempt in models_to_try:
+                try:
+                    self.model = genai.GenerativeModel(model_attempt)
+                    self.model_name = model_attempt
+                    break
+                except Exception:
+                    continue
+
+            if self.model is None:
+                # Fall back to stub mode if no model works
+                print(f"Warning: Could not initialize any Gemini model. Available models: {models_to_try}")
+                print("Falling back to stub mode")
         else:
             self.model = None
 

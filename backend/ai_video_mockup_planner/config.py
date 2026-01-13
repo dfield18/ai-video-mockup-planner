@@ -14,7 +14,7 @@ class Config:
 
     # Google AI
     GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-pro")  # Changed to more widely available model
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.4"))
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4096"))
 
