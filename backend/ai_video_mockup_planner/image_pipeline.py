@@ -20,7 +20,7 @@ from .prompt_builders import (
     build_regenerate_prompt
 )
 from .gemini_client import get_gemini_client
-from .dalle_client import get_dalle_client
+from .imagen_client import get_imagen_client
 from .prompts import INTERPRET_IMAGE_FEEDBACK_PROMPT_V1
 from .config import config
 from .utils import generate_id
@@ -110,9 +110,9 @@ def _generate_style_frame(project_id: str, plan: PlanAsset) -> List[ImageAsset]:
     """Generate style frame image."""
     prompt, negative_prompt = build_style_frame_prompt(plan, project_id)
 
-    # Generate actual image with DALL-E 3
-    dalle_client = get_dalle_client()
-    image_url = dalle_client.generate_image(prompt)
+    # Generate actual image with Google Imagen
+    imagen_client = get_imagen_client()
+    image_url = imagen_client.generate_image(prompt, negative_prompt=negative_prompt, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
     image = ImageAsset(
         image_id=generate_id("img_style_"),
@@ -133,13 +133,13 @@ def _generate_style_frame(project_id: str, plan: PlanAsset) -> List[ImageAsset]:
 def _generate_character_references(project_id: str, plan: PlanAsset) -> List[ImageAsset]:
     """Generate character reference images."""
     images = []
-    dalle_client = get_dalle_client()
+    imagen_client = get_imagen_client()
 
     for character in plan.characters:
         prompt, negative_prompt = build_character_reference_prompt(character, plan, project_id)
 
-        # Generate actual image with DALL-E 3
-        image_url = dalle_client.generate_image(prompt)
+        # Generate actual image with Google Imagen
+        image_url = imagen_client.generate_image(prompt, negative_prompt=negative_prompt, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
         image = ImageAsset(
             image_id=generate_id(f"img_char_{character.character_id}_"),
@@ -163,13 +163,13 @@ def _generate_character_references(project_id: str, plan: PlanAsset) -> List[Ima
 def _generate_location_references(project_id: str, plan: PlanAsset) -> List[ImageAsset]:
     """Generate location reference images."""
     images = []
-    dalle_client = get_dalle_client()
+    imagen_client = get_imagen_client()
 
     for location in plan.locations:
         prompt, negative_prompt = build_location_reference_prompt(location, plan, project_id)
 
-        # Generate actual image with DALL-E 3
-        image_url = dalle_client.generate_image(prompt)
+        # Generate actual image with Google Imagen
+        image_url = imagen_client.generate_image(prompt, negative_prompt=negative_prompt, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
         image = ImageAsset(
             image_id=generate_id(f"img_loc_{location.location_id}_"),
@@ -215,9 +215,9 @@ def _generate_shot_frame(
     """Generate a single shot frame image."""
     prompt, negative_prompt = build_shot_frame_prompt(shot, plan, lock_profile, project_id)
 
-    # Generate actual image with DALL-E 3
-    dalle_client = get_dalle_client()
-    image_url = dalle_client.generate_image(prompt)
+    # Generate actual image with Google Imagen
+    imagen_client = get_imagen_client()
+    image_url = imagen_client.generate_image(prompt, negative_prompt=negative_prompt, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
     if lock_profile is None:
         lock_profile = LockProfile()
@@ -309,9 +309,9 @@ def edit_image(
     if remove_elements:
         new_negative += ", " + ", ".join(remove_elements)
 
-    # Generate actual image with DALL-E 3
-    dalle_client = get_dalle_client()
-    image_url = dalle_client.generate_image(new_prompt)
+    # Generate actual image with Google Imagen
+    imagen_client = get_imagen_client()
+    image_url = imagen_client.generate_image(new_prompt, negative_prompt=new_negative, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
     # Create new version
     new_image = ImageAsset(
@@ -365,9 +365,9 @@ def regenerate_image(
     if lock_profile.banned_elements:
         new_negative += ", " + ", ".join(lock_profile.banned_elements)
 
-    # Generate actual image with DALL-E 3
-    dalle_client = get_dalle_client()
-    image_url = dalle_client.generate_image(new_prompt)
+    # Generate actual image with Google Imagen
+    imagen_client = get_imagen_client()
+    image_url = imagen_client.generate_image(new_prompt, negative_prompt=new_negative, aspect_ratio=config.IMAGE_ASPECT_RATIO)
 
     # Create new version
     new_image = ImageAsset(

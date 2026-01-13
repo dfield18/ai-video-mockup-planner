@@ -18,7 +18,15 @@ class Config:
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.4"))
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4096"))
 
-    # OpenAI (for image generation)
+    # Google Cloud (for Imagen image generation)
+    GOOGLE_CLOUD_PROJECT_ID: str = os.getenv("GOOGLE_CLOUD_PROJECT_ID", "")
+    GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+    GOOGLE_CLOUD_CREDENTIALS_JSON: str = os.getenv("GOOGLE_CLOUD_CREDENTIALS_JSON", "")
+
+    # Image generation settings
+    IMAGE_ASPECT_RATIO: str = os.getenv("IMAGE_ASPECT_RATIO", "1:1")  # Options: 1:1, 16:9, 9:16, 4:3, 3:4
+
+    # OpenAI (for image generation - backup option)
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     DALLE_MODEL: str = os.getenv("DALLE_MODEL", "dall-e-3")
     DALLE_SIZE: str = os.getenv("DALLE_SIZE", "1024x1024")  # Options: 1024x1024, 1792x1024, 1024x1792
