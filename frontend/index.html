@@ -756,32 +756,62 @@ Then you know why I'm here. This changes everything.</textarea>
             const step4Result = document.getElementById('step4Result');
             const originalMessage = step4Result.innerHTML;
 
+            console.group('🎨 IMAGE GENERATION');
+            console.log('Starting image generation for project:', projectId);
+            console.log('Scope: PROJECT (all images)');
+            console.log('This may take 1-3 minutes...');
+
             try {
                 // Generate all image types: style frame, characters, locations, and shots
                 // Note: This can take 60-120 seconds, so we use AbortController with extended timeout
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
 
+                const requestBody = {
+                    project_id: projectId,
+                    scope: { scope_type: "project" },
+                    asset_type: "style_frame"
+                };
+
+                console.log('Request payload:', requestBody);
+                console.log(`Calling: POST ${API_URL}/images/generate`);
+
                 const response = await fetch(`${API_URL}/images/generate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        project_id: projectId,
-                        scope: { scope_type: "project" },
-                        asset_type: "style_frame"
-                    }),
+                    body: JSON.stringify(requestBody),
                     signal: controller.signal
                 });
 
                 clearTimeout(timeoutId);
 
+                console.log(`Response status: ${response.status} ${response.statusText}`);
+
                 if (!response.ok) {
-                    console.error('Image generation failed:', response.status);
+                    console.error('❌ Image generation failed:', response.status);
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Error details:', errorData);
                     showSuccess('step4', `✓ Shot list generated!<br>
                         <strong>Note:</strong> Image generation is processing in the background. Check back in Step 5!`);
                 } else {
                     const imageData = await response.json();
                     const imageCount = imageData.length || 0;
+
+                    console.log(`✅ Success! Generated ${imageCount} images`);
+                    console.log('Image breakdown:');
+                    const typeCount = {};
+                    imageData.forEach(img => {
+                        typeCount[img.asset_type] = (typeCount[img.asset_type] || 0) + 1;
+                    });
+                    Object.keys(typeCount).forEach(type => {
+                        console.log(`  ${type}: ${typeCount[type]}`);
+                    });
+
+                    // Check for placeholder URLs
+                    const placeholders = imageData.filter(img => img.image_url && img.image_url.startsWith('placeholder://'));
+                    if (placeholders.length > 0) {
+                        console.warn(`⚠️ Warning: ${placeholders.length} images are placeholders (API not configured)`);
+                    }
 
                     showSuccess('step4', `✓ Shot list & ${imageCount} image prompts generated!<br>
                         <strong>🎨 Go to Step 5 and click "View Image Gallery"!</strong>`);
@@ -790,17 +820,19 @@ Then you know why I'm here. This changes everything.</textarea>
                 markStepComplete(4);
             } catch (error) {
                 if (error.name === 'AbortError') {
-                    console.log('Image generation timed out - likely still processing');
+                    console.log('⏱️ Image generation timed out - likely still processing');
                     showSuccess('step4', `✓ Shot list generated!<br>
                         <strong>Note:</strong> Image generation is taking longer than expected (this is normal). <br>
                         Images will be ready in 1-2 minutes. Try "View Image Gallery" in Step 5!`);
                 } else {
-                    console.error('Image generation error:', error);
+                    console.error('❌ Image generation error:', error);
                     showSuccess('step4', `✓ Shot list generated!<br>
                         <strong>Note:</strong> Image generation is processing. Check Step 5 gallery!`);
                 }
                 markStepComplete(4);
             }
+
+            console.groupEnd();
         }
 
         async function exportStoryboard() {
@@ -857,14 +889,67 @@ Then you know why I'm here. This changes everything.</textarea>
             const gallery = document.getElementById('imageGallery');
             gallery.innerHTML = '';
 
+            // Debug logging
+            console.group('🎨 IMAGE GALLERY DEBUG');
+            console.log(`Total images: ${images.length}`);
+
+            let realImages = 0;
+            let placeholderImages = 0;
+
             if (images.length === 0) {
                 gallery.innerHTML = '<p style="text-align: center; color: #6b7280;">No images generated yet.</p>';
+                console.warn('⚠️ No images found in storyboard data');
             } else {
                 images.forEach((img, index) => {
+                    const isRealImage = img.image_url && !img.image_url.startsWith('placeholder://');
+
+                    if (isRealImage) {
+                        realImages++;
+                        console.log(`✅ Image ${index + 1} [${img.asset_type}]: REAL IMAGE`, {
+                            imageId: img.image_id,
+                            assetType: img.asset_type,
+                            url: img.image_url.substring(0, 100) + '...',
+                            shotId: img.shot_id || 'N/A',
+                            characterIds: img.character_ids || [],
+                            locationId: img.location_id || 'N/A'
+                        });
+                    } else {
+                        placeholderImages++;
+                        console.warn(`⚠️ Image ${index + 1} [${img.asset_type}]: PLACEHOLDER - API NOT CONFIGURED`, {
+                            imageId: img.image_id,
+                            assetType: img.asset_type,
+                            url: img.image_url,
+                            shotId: img.shot_id || 'N/A',
+                            characterIds: img.character_ids || [],
+                            locationId: img.location_id || 'N/A',
+                            reason: 'Google Cloud or OpenAI credentials missing from Railway'
+                        });
+                    }
+
                     const card = createImageCard(img, index);
                     gallery.appendChild(card);
                 });
+
+                console.log(`\n📊 Summary:`);
+                console.log(`  ✅ Real images: ${realImages} (${Math.round(realImages/images.length*100)}%)`);
+                console.log(`  ⚠️ Placeholders: ${placeholderImages} (${Math.round(placeholderImages/images.length*100)}%)`);
+
+                if (placeholderImages > 0) {
+                    console.warn(`\n⚠️ TROUBLESHOOTING:`);
+                    console.warn(`  1. Check Railway dashboard environment variables:`);
+                    console.warn(`     - GOOGLE_CLOUD_PROJECT_ID`);
+                    console.warn(`     - GOOGLE_CLOUD_LOCATION`);
+                    console.warn(`     - GOOGLE_CLOUD_CREDENTIALS_JSON`);
+                    console.warn(`  2. Restart Railway service after adding credentials`);
+                    console.warn(`  3. Run window.debugImageAPI() to check API status`);
+                }
             }
+
+            console.groupEnd();
+
+            // Make debug function available globally
+            window.imageDebugData = storyboardData.images;
+            console.log('\n💡 Tip: Run window.debugImageAPI() to check image generation status');
 
             document.getElementById('imageGallerySection').classList.remove('hidden');
             document.getElementById('imageGallerySection').scrollIntoView({ behavior: 'smooth' });
@@ -981,6 +1066,142 @@ Then you know why I'm here. This changes everything.</textarea>
                 closeModal();
             }
         });
+
+        // Global debug function for checking image API status
+        window.debugImageAPI = async function() {
+            console.group('🔍 IMAGE API DEBUG CHECK');
+
+            if (!projectId) {
+                console.error('❌ No project created yet. Complete Step 1 first.');
+                console.groupEnd();
+                return;
+            }
+
+            console.log(`Project ID: ${projectId}`);
+
+            try {
+                // Fetch fresh storyboard data
+                console.log('Fetching storyboard data...');
+                const response = await fetch(`${API_URL}/export/storyboard`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+
+                if (!response.ok) {
+                    console.error(`❌ API Error: HTTP ${response.status}`);
+                    const errorData = await response.json();
+                    console.error('Error details:', errorData);
+                    console.groupEnd();
+                    return;
+                }
+
+                const data = await response.json();
+                const images = data.images || [];
+
+                console.log(`\n📦 Response received: ${images.length} total images`);
+
+                // Categorize images
+                const imagesByType = {};
+                const imagesByStatus = {
+                    real: [],
+                    placeholder_stub: [],
+                    placeholder_error: [],
+                    placeholder_other: []
+                };
+
+                images.forEach((img, i) => {
+                    // Group by type
+                    if (!imagesByType[img.asset_type]) {
+                        imagesByType[img.asset_type] = [];
+                    }
+                    imagesByType[img.asset_type].push(img);
+
+                    // Group by status
+                    if (img.image_url && img.image_url.startsWith('data:image')) {
+                        imagesByStatus.real.push(img);
+                    } else if (img.image_url && img.image_url.includes('stub')) {
+                        imagesByStatus.placeholder_stub.push(img);
+                    } else if (img.image_url && img.image_url.includes('error')) {
+                        imagesByStatus.placeholder_error.push(img);
+                    } else {
+                        imagesByStatus.placeholder_other.push(img);
+                    }
+                });
+
+                console.log('\n📊 Images by Type:');
+                Object.keys(imagesByType).forEach(type => {
+                    console.log(`  ${type}: ${imagesByType[type].length}`);
+                });
+
+                console.log('\n🎯 Images by Status:');
+                console.log(`  ✅ Real images (data:image): ${imagesByStatus.real.length}`);
+                console.log(`  ⚠️ Stub mode (credentials missing): ${imagesByStatus.placeholder_stub.length}`);
+                console.log(`  ❌ Generation errors: ${imagesByStatus.placeholder_error.length}`);
+                console.log(`  ❓ Other placeholders: ${imagesByStatus.placeholder_other.length}`);
+
+                // Show details of failed images
+                if (imagesByStatus.placeholder_stub.length > 0) {
+                    console.warn('\n⚠️ STUB MODE IMAGES (API credentials not configured):');
+                    imagesByStatus.placeholder_stub.forEach((img, i) => {
+                        console.warn(`  ${i + 1}. ${img.image_id} [${img.asset_type}]`);
+                        console.warn(`     URL: ${img.image_url}`);
+                    });
+                }
+
+                if (imagesByStatus.placeholder_error.length > 0) {
+                    console.error('\n❌ ERROR IMAGES (generation failed):');
+                    imagesByStatus.placeholder_error.forEach((img, i) => {
+                        console.error(`  ${i + 1}. ${img.image_id} [${img.asset_type}]`);
+                        console.error(`     URL: ${img.image_url}`);
+                    });
+                }
+
+                // Check for real images
+                if (imagesByStatus.real.length > 0) {
+                    console.log('\n✅ SUCCESS: Real images detected!');
+                    imagesByStatus.real.forEach((img, i) => {
+                        console.log(`  ${i + 1}. ${img.image_id} [${img.asset_type}]`);
+                        const urlPreview = img.image_url.substring(0, 50) + '...';
+                        console.log(`     URL: ${urlPreview}`);
+                    });
+                } else {
+                    console.warn('\n⚠️ NO REAL IMAGES FOUND');
+                    console.warn('This means the Imagen client is running in stub mode.');
+                    console.warn('\nPossible causes:');
+                    console.warn('  1. Google Cloud credentials not set in Railway');
+                    console.warn('  2. Credentials set but service not restarted');
+                    console.warn('  3. google-cloud-aiplatform package not installed');
+                    console.warn('  4. Google Cloud project ID is "stub_for_testing"');
+                    console.warn('  5. Vertex AI API not enabled for the project');
+                    console.warn('\nNext steps:');
+                    console.warn('  1. Go to Railway dashboard');
+                    console.warn('  2. Check Variables tab for:');
+                    console.warn('     - GOOGLE_CLOUD_PROJECT_ID (should be your GCP project ID)');
+                    console.warn('     - GOOGLE_CLOUD_LOCATION (should be us-central1 or similar)');
+                    console.warn('     - GOOGLE_CLOUD_CREDENTIALS_JSON (should be JSON string)');
+                    console.warn('  3. Restart the service in Railway');
+                    console.warn('  4. Wait 30 seconds, then run this debug again');
+                }
+
+                // Store data globally for inspection
+                window.lastDebugData = data;
+                console.log('\n💾 Full storyboard data saved to window.lastDebugData');
+                console.log('💡 Inspect it with: console.log(window.lastDebugData)');
+
+            } catch (error) {
+                console.error('❌ Debug check failed:', error);
+            }
+
+            console.groupEnd();
+        };
+
+        // Log on page load
+        console.log('%c🎬 AI Video Mockup Planner', 'font-size: 20px; font-weight: bold; color: #667eea;');
+        console.log('Debug tools available:');
+        console.log('  • window.debugImageAPI() - Check image generation status');
+        console.log('  • window.imageDebugData - View all image data from gallery');
+        console.log('  • window.lastDebugData - View last API response data');
 
         function viewStoryboard() {
             if (!storyboardData) return;
