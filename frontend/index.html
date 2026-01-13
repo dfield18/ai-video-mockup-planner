@@ -900,8 +900,9 @@ Then you know why I'm here. This changes everything.</textarea>
                 imageHTML = `
                     <div class="image-placeholder ${typeClass}">
                         ${typeLabel}
-                        <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; font-size: 11px;">
-                            GENERATING...
+                        <div style="position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 8px; border-radius: 4px; font-size: 10px; text-align: center;">
+                            ⚠️ IMAGE API NOT CONFIGURED<br>
+                            <span style="font-size: 9px;">Add Google Cloud or OpenAI credentials to Railway</span>
                         </div>
                     </div>
                 `;
