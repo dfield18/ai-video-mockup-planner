@@ -5,6 +5,8 @@ RESTful API for managing projects, scripts, plans, shots, and images.
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 
 from . import __version__
 from .schemas import (
@@ -171,7 +173,7 @@ def get_active_plan_endpoint(project_id: str):
 # SHOTS
 # ────────────────────────────────────────────────────────────────────────────────
 
-@app.post("/shots", response_model=ShotPlanAsset)
+@app.post("/shots")
 def generate_shots_endpoint(request: GenerateShotsRequest):
     """Generate shot plan from plan."""
     try:
@@ -179,7 +181,7 @@ def generate_shots_endpoint(request: GenerateShotsRequest):
             request.project_id,
             request.plan_asset_id
         )
-        return shot_plan
+        return JSONResponse(content=jsonable_encoder(shot_plan))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
