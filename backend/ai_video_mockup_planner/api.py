@@ -56,11 +56,11 @@ def health_check():
 # PROJECTS
 # ────────────────────────────────────────────────────────────────────────────────
 
-@app.post("/projects", response_model=Project)
+@app.post("/projects")
 def create_project_endpoint(request: CreateProjectRequest):
     """Create a new project."""
     project = pipeline.create_project(request.title, request.user_id)
-    return project
+    return JSONResponse(content=jsonable_encoder(project))
 
 
 @app.get("/projects/{project_id}", response_model=Project)
@@ -82,7 +82,7 @@ def list_projects_endpoint():
 # SCRIPTS
 # ────────────────────────────────────────────────────────────────────────────────
 
-@app.post("/script", response_model=ScriptAsset)
+@app.post("/script")
 def create_script_endpoint(request: CreateScriptRequest):
     """Create or update a script."""
     # Check if we're updating an existing script
@@ -96,7 +96,7 @@ def create_script_endpoint(request: CreateScriptRequest):
         request.content,
         request.title
     )
-    return script
+    return JSONResponse(content=jsonable_encoder(script))
 
 
 @app.get("/script/{project_id}", response_model=ScriptAsset)
@@ -122,7 +122,7 @@ def get_active_script_endpoint(project_id: str):
 # PLANS
 # ────────────────────────────────────────────────────────────────────────────────
 
-@app.post("/plan", response_model=PlanAsset)
+@app.post("/plan")
 def generate_plan_endpoint(request: GeneratePlanRequest):
     """Generate a plan from script."""
     try:
@@ -131,12 +131,12 @@ def generate_plan_endpoint(request: GeneratePlanRequest):
             request.script_asset_id,
             request.preferences
         )
-        return plan
+        return JSONResponse(content=jsonable_encoder(plan))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/plan/patch", response_model=PlanAsset)
+@app.post("/plan/patch")
 def patch_plan_endpoint(request: PatchPlanRequest):
     """Apply patches to plan, creating new version."""
     try:
@@ -145,7 +145,7 @@ def patch_plan_endpoint(request: PatchPlanRequest):
             request.plan_asset_id,
             request.patches
         )
-        return plan
+        return JSONResponse(content=jsonable_encoder(plan))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -209,7 +209,7 @@ def get_active_shots_endpoint(project_id: str):
 # IMAGES
 # ────────────────────────────────────────────────────────────────────────────────
 
-@app.post("/images/generate", response_model=List[ImageAsset])
+@app.post("/images/generate")
 def generate_images_endpoint(request: GenerateImagesRequest):
     """Generate images for a scope."""
     try:
@@ -218,12 +218,12 @@ def generate_images_endpoint(request: GenerateImagesRequest):
             request.scope,
             request.lock_profile
         )
-        return images
+        return JSONResponse(content=jsonable_encoder(images))
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@app.post("/image/action", response_model=ImageAsset)
+@app.post("/image/action")
 def image_action_endpoint(request: ImageActionRequest):
     """Perform action on image (accept/edit/regenerate)."""
     try:
@@ -248,7 +248,7 @@ def image_action_endpoint(request: ImageActionRequest):
         else:
             raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
 
-        return image
+        return JSONResponse(content=jsonable_encoder(image))
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
