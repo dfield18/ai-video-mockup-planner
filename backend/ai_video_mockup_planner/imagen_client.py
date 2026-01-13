@@ -30,42 +30,75 @@ class ImagenClient:
         self.project_id = project_id or config.GOOGLE_CLOUD_PROJECT_ID
         self.location = location or config.GOOGLE_CLOUD_LOCATION
         self.credentials_json = credentials_json or config.GOOGLE_CLOUD_CREDENTIALS_JSON
+        self.initialization_error = None
+
+        print("\n" + "="*60)
+        print("IMAGEN CLIENT INITIALIZATION")
+        print("="*60)
+        print(f"Project ID: {self.project_id or '(not set)'}")
+        print(f"Location: {self.location or '(not set)'}")
+        print(f"Credentials provided: {'Yes' if self.credentials_json else 'No'}")
+        if self.credentials_json:
+            cred_preview = self.credentials_json[:50] + "..." if len(self.credentials_json) > 50 else self.credentials_json
+            print(f"Credentials preview: {cred_preview}")
+        print(f"IMAGEN_AVAILABLE (package installed): {IMAGEN_AVAILABLE}")
 
         # Check if we should use stub mode
         if not self.project_id or self.project_id == "stub_for_testing":
+            print("⚠️ STUB MODE: No project ID configured")
+            self.initialization_error = "No GOOGLE_CLOUD_PROJECT_ID set"
             self.model = None
             self.stub_mode = True
         elif not IMAGEN_AVAILABLE:
-            print("Warning: google-cloud-aiplatform not installed. Using stub mode.")
+            print("⚠️ STUB MODE: google-cloud-aiplatform package not installed")
+            self.initialization_error = "google-cloud-aiplatform not installed"
             self.model = None
             self.stub_mode = True
         else:
             try:
                 # Initialize Vertex AI
                 if self.credentials_json:
+                    print("Setting up credentials from environment variable...")
                     # If credentials JSON is provided as a string (from env var)
                     # Write it to a temp file and set GOOGLE_APPLICATION_CREDENTIALS
                     import tempfile
                     with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
                         if self.credentials_json.startswith('{'):
                             # It's JSON string
+                            print("Credentials format: JSON string")
                             f.write(self.credentials_json)
                         else:
                             # It's a file path
+                            print("Credentials format: File path")
                             with open(self.credentials_json, 'r') as cred_file:
                                 f.write(cred_file.read())
                         credentials_path = f.name
                     os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+                    print(f"Credentials written to: {credentials_path}")
+                else:
+                    print("⚠️ No credentials provided, will try default authentication")
 
+                print(f"Initializing Vertex AI with project={self.project_id}, location={self.location}")
                 aiplatform.init(project=self.project_id, location=self.location)
+
+                print("Loading ImageGenerationModel...")
                 self.model = ImageGenerationModel.from_pretrained("imagegeneration@006")
                 self.stub_mode = False
-                print(f"✓ Imagen initialized (project: {self.project_id}, location: {self.location})")
+                print(f"✅ SUCCESS: Imagen initialized (project: {self.project_id}, location: {self.location})")
             except Exception as e:
-                print(f"Warning: Could not initialize Imagen: {str(e)}")
-                print("Falling back to stub mode")
+                print(f"❌ ERROR: Could not initialize Imagen: {str(e)}")
+                print(f"Exception type: {type(e).__name__}")
+                import traceback
+                print("Full traceback:")
+                traceback.print_exc()
+                print("⚠️ Falling back to stub mode")
+                self.initialization_error = str(e)
                 self.model = None
                 self.stub_mode = True
+
+        print("="*60)
+        print(f"Final status: {'STUB MODE' if self.stub_mode else 'ACTIVE'}")
+        print("="*60 + "\n")
 
     def generate_image(
         self,

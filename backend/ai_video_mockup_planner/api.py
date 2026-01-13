@@ -20,6 +20,8 @@ from .storage import repository
 from . import pipeline
 from .image_pipeline import generate_images, accept_image, edit_image, regenerate_image
 from .exports import export_plan_json, export_characters_csv, export_shots_csv, export_storyboard
+from .imagen_client import get_imagen_client
+from .config import config
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -48,8 +50,30 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    """Health check endpoint."""
-    return {"status": "ok", "version": __version__}
+    """Health check endpoint with Imagen client status."""
+    imagen_client = get_imagen_client()
+
+    imagen_status = {
+        "stub_mode": imagen_client.stub_mode,
+        "project_id_configured": bool(config.GOOGLE_CLOUD_PROJECT_ID),
+        "location_configured": bool(config.GOOGLE_CLOUD_LOCATION),
+        "credentials_configured": bool(config.GOOGLE_CLOUD_CREDENTIALS_JSON),
+        "initialization_error": getattr(imagen_client, 'initialization_error', None)
+    }
+
+    # Mask actual values for security
+    if config.GOOGLE_CLOUD_PROJECT_ID:
+        imagen_status["project_id_preview"] = config.GOOGLE_CLOUD_PROJECT_ID[:20] + "..." if len(config.GOOGLE_CLOUD_PROJECT_ID) > 20 else config.GOOGLE_CLOUD_PROJECT_ID
+    if config.GOOGLE_CLOUD_LOCATION:
+        imagen_status["location"] = config.GOOGLE_CLOUD_LOCATION
+    if config.GOOGLE_CLOUD_CREDENTIALS_JSON:
+        imagen_status["credentials_preview"] = config.GOOGLE_CLOUD_CREDENTIALS_JSON[:30] + "..."
+
+    return {
+        "status": "ok",
+        "version": __version__,
+        "imagen": imagen_status
+    }
 
 
 # ────────────────────────────────────────────────────────────────────────────────

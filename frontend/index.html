@@ -1196,12 +1196,77 @@ Then you know why I'm here. This changes everything.</textarea>
             console.groupEnd();
         };
 
+        // Health check function
+        window.checkImagenHealth = async function() {
+            console.group('🏥 IMAGEN HEALTH CHECK');
+
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+
+                console.log('API Version:', data.version);
+                console.log('\n📊 Imagen Configuration:');
+                console.log(`  Status: ${data.imagen.stub_mode ? '⚠️ STUB MODE (not working)' : '✅ ACTIVE'}`);
+                console.log(`  Project ID configured: ${data.imagen.project_id_configured ? '✅ Yes' : '❌ No'}`);
+                console.log(`  Location configured: ${data.imagen.location_configured ? '✅ Yes' : '❌ No'}`);
+                console.log(`  Credentials configured: ${data.imagen.credentials_configured ? '✅ Yes' : '❌ No'}`);
+
+                if (data.imagen.project_id_preview) {
+                    console.log(`  Project ID preview: ${data.imagen.project_id_preview}`);
+                }
+                if (data.imagen.location) {
+                    console.log(`  Location: ${data.imagen.location}`);
+                }
+                if (data.imagen.credentials_preview) {
+                    console.log(`  Credentials preview: ${data.imagen.credentials_preview}`);
+                }
+
+                if (data.imagen.initialization_error) {
+                    console.error('\n❌ Initialization Error:');
+                    console.error(`  ${data.imagen.initialization_error}`);
+                }
+
+                if (data.imagen.stub_mode) {
+                    console.warn('\n⚠️ IMAGEN IS IN STUB MODE');
+                    console.warn('This means images will be placeholders, not real generated images.\n');
+
+                    if (!data.imagen.project_id_configured) {
+                        console.warn('Missing: GOOGLE_CLOUD_PROJECT_ID environment variable');
+                    }
+                    if (!data.imagen.location_configured) {
+                        console.warn('Missing: GOOGLE_CLOUD_LOCATION environment variable');
+                    }
+                    if (!data.imagen.credentials_configured) {
+                        console.warn('Missing: GOOGLE_CLOUD_CREDENTIALS_JSON environment variable');
+                    }
+
+                    console.warn('\n📝 To fix:');
+                    console.warn('  1. Go to Railway dashboard → Variables tab');
+                    console.warn('  2. Add the missing environment variables');
+                    console.warn('  3. Restart the Railway service');
+                    console.warn('  4. Run this check again: window.checkImagenHealth()');
+                } else {
+                    console.log('\n✅ Imagen is configured correctly and ready to generate images!');
+                }
+
+                window.lastHealthCheck = data;
+                console.log('\n💾 Full health data saved to window.lastHealthCheck');
+
+            } catch (error) {
+                console.error('❌ Health check failed:', error);
+            }
+
+            console.groupEnd();
+        };
+
         // Log on page load
         console.log('%c🎬 AI Video Mockup Planner', 'font-size: 20px; font-weight: bold; color: #667eea;');
         console.log('Debug tools available:');
+        console.log('  • window.checkImagenHealth() - Check if Imagen API is configured');
         console.log('  • window.debugImageAPI() - Check image generation status');
         console.log('  • window.imageDebugData - View all image data from gallery');
         console.log('  • window.lastDebugData - View last API response data');
+        console.log('\n💡 Start by running: window.checkImagenHealth()');
 
         function viewStoryboard() {
             if (!storyboardData) return;
