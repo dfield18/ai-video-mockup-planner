@@ -18,6 +18,12 @@ class Config:
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.4"))
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "4096"))
 
+    # OpenAI (for image generation)
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    DALLE_MODEL: str = os.getenv("DALLE_MODEL", "dall-e-3")
+    DALLE_SIZE: str = os.getenv("DALLE_SIZE", "1024x1024")  # Options: 1024x1024, 1792x1024, 1024x1792
+    DALLE_QUALITY: str = os.getenv("DALLE_QUALITY", "standard")  # Options: standard, hd
+
     # Storage
     STORAGE_DIR: Path = Path(os.getenv("STORAGE_DIR", "./storage"))
 

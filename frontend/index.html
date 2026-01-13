@@ -882,13 +882,33 @@ Then you know why I'm here. This changes everything.</textarea>
             else if (img.character_ids && img.character_ids.length > 0) titleText = `Character ${img.character_ids[0]}`;
             else if (img.location_id) titleText = `Location ${img.location_id}`;
 
-            card.innerHTML = `
-                <div class="image-placeholder ${typeClass}">
-                    ${typeLabel}
-                    <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; font-size: 11px;">
-                        AI PROMPT
+            // Check if it's a real image URL or placeholder
+            const isRealImage = img.image_url && !img.image_url.startsWith('placeholder://');
+
+            let imageHTML;
+            if (isRealImage) {
+                // Show actual generated image
+                imageHTML = `
+                    <div style="width: 100%; height: 200px; overflow: hidden; background: #000;">
+                        <img src="${img.image_url}" alt="${titleText}"
+                             style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;"
+                             onclick="window.open('${img.image_url}', '_blank')">
                     </div>
-                </div>
+                `;
+            } else {
+                // Show placeholder gradient
+                imageHTML = `
+                    <div class="image-placeholder ${typeClass}">
+                        ${typeLabel}
+                        <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 4px; font-size: 11px;">
+                            GENERATING...
+                        </div>
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                ${imageHTML}
                 <div class="image-card-content">
                     <div class="image-card-type">${typeLabel}</div>
                     <div class="image-card-title">${titleText}</div>
